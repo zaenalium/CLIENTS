@@ -1,0 +1,63 @@
+---
+title: "Simulasi SmoteBoost & SmoteBagged SVM based"
+author: "Ahmad Zaenal"
+date: "August 4, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import Data
+
+
+```{r read data & load package & setup parameters}
+library(data.table)
+library(ebmc)
+library(caret)
+df <- fread("imb_IRlowerThan9/vehicle0/vehicle0.dat")
+
+df[, Class := factor(Class, levels = c("negative", "positive"), labels = c("0", "1"))]
+
+
+kernel <- c("linear", "polynomial", "radial", "sigmoid")
+size <- c(10, 50, 100, 200)
+
+cv_fold <- createFolds(1:nrow(df), k = 5)
+```
+
+## Loop the get best paramter
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+list_measures <- list()
+for(i in 1:length(cv_fold)) {
+  cat("fold ke-",i)
+  train <- df[-cv_fold[[i]], ]
+  test <- df[cv_fold[[i]], ]
+  model <- sbag(Class ~ ., data = train, size = 40, alg = "svm", svm.ker = "sigmoid")
+  
+  pred_train <- predict(model, train)
+  pred_test <- predict(model, test)
+
+##auc  
+list_measures$auc_train[[i]] <-  measure(label = train$Class, 
+                                          probability = pred_train, metric = c("auc"))
+list_measures$auc_test[[i]] <-  measure(label = test$Class, 
+                                        probability = pred_test, metric = c("auc"))
+
+
+###gmean
+list_measures$gmean_train[[i]] <-  measure(label = train$Class, 
+                                           probability = pred_train, metric = c("gmean"))
+list_measures$gmean_test[[i]] <-  measure(label = test$Class, 
+                                          probability = pred_test, metric = c("gmean"))
+}
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
